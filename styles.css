@@ -1,2 +1,10 @@
-body { margin: 0; overflow: hidden; font-family: Arial; }
-#score { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); color: white; font-size: 24px; }
+body { margin: 0; overflow: hidden; font-family: Arial; background: #111; }
+#score {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 28px;
+  font-weight: bold;
+}
