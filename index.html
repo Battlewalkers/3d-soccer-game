@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>3D Soccer Game</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #222; }
+    #controls {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    button {
+      padding: 15px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div id="controls">
+  <button onclick="moveUp()">⬆️</button>
+  <button onclick="moveDown()">⬇️</button>
+  <button onclick="kickBall()">⚽ Kick</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+
+<script>
+let scene = new THREE.Scene();
+let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+let renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// Field
+let fieldGeometry = new THREE.PlaneGeometry(20, 10);
+let fieldMaterial = new THREE.MeshBasicMaterial({ color: 0x228B22 });
+let field = new THREE.Mesh(fieldGeometry, fieldMaterial);
+field.rotation.x = -Math.PI / 2;
+scene.add(field);
+
+// Player
+let playerGeometry = new THREE.BoxGeometry(1,1,1);
+let playerMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+let player = new THREE.Mesh(playerGeometry, playerMaterial);
+player.position.y = 0.5;
+player.position.x = -5;
+scene.add(player);
+
+// Ball
+let ballGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+let ballMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+let ball = new THREE.Mesh(ballGeometry, ballMaterial);
+ball.position.y = 0.5;
+scene.add(ball);
+
+camera.position.z = 10;
+camera.position.y = 10;
+camera.lookAt(0,0,0);
+
+let ballSpeed = 0;
+
+function moveUp() {
+  player.position.z -= 0.5;
+}
+
+function moveDown() {
+  player.position.z += 0.5;
+}
+
+function kickBall() {
+  if (Math.abs(player.position.x - ball.position.x) < 2) {
+    ballSpeed = 0.3;
+  }
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  
+  if (ballSpeed > 0) {
+    ball.position.x += ballSpeed;
+  }
+
+  renderer.render(scene, camera);
+}
+
+animate();
+</script>
+
+</body>
+</html>
