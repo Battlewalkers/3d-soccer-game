@@ -14,11 +14,6 @@ function startLocal() {
     initGame();
 }
 
-function startMultiplayer() {
-    alert('Multiplayer coming soon! (Basic WebRTC can be added)');
-    // Placeholder for multiplayer connection
-}
-
 // --- INIT SCENE ---
 function initGame(){
     scene = new THREE.Scene();
