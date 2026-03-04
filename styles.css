@@ -1,4 +1,13 @@
 body { margin: 0; overflow: hidden; font-family: Arial; background: #111; }
+#menu {
+  position: absolute;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  background: linear-gradient(#020204, #001122);
+  color: white;
+}
+button { font-size: 20px; padding: 12px 24px; margin: 10px; cursor: pointer; }
 #score {
   position: absolute;
   top: 10px;
@@ -7,4 +16,5 @@ body { margin: 0; overflow: hidden; font-family: Arial; background: #111; }
   color: white;
   font-size: 28px;
   font-weight: bold;
+  display: none;
 }
