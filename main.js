@@ -1,140 +1,118 @@
-// --- GLOBAL VARIABLES ---
-let scene, camera, renderer;
-let ball, ballVelocity = new THREE.Vector3();
-let car1, car2;
-let car1Velocity = new THREE.Vector3();
-let car2Velocity = new THREE.Vector3();
-let keys = {};
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
 let score1 = 0, score2 = 0;
 
-// --- MAIN MENU HANDLERS ---
-function startLocal() {
-    document.getElementById('menu').style.display='none';
-    document.getElementById('score').style.display='block';
-    initGame();
-}
+// --- PLAYER & BALL DATA ---
+const player1 = {x:100, y:canvas.height/2, radius:15, color:"blue", dx:0, dy:0};
+const player2 = {x:700, y:canvas.height/2, radius:15, color:"red", dx:0, dy:0};
+const ball = {x:canvas.width/2, y:canvas.height/2, radius:10, dx:0, dy:0};
 
-// --- INIT SCENE ---
-function initGame(){
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    renderer = new THREE.WebGLRenderer({antialias:true});
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+// --- INPUT ---
+const keys = {};
+window.addEventListener("keydown", e=>keys[e.key.toLowerCase()]=true);
+window.addEventListener("keyup", e=>keys[e.key.toLowerCase()]=false);
 
-    // FIELD
-    let field = new THREE.Mesh(new THREE.PlaneGeometry(60,35),
-        new THREE.MeshBasicMaterial({color:0x1f7a1f}));
-    field.rotation.x=-Math.PI/2;
-    scene.add(field);
+// --- GAME LOOP ---
+function update(){
+  // PLAYER 1 CONTROLS (WASD)
+  player1.dy = player1.dx = 0;
+  if(keys['w']) player1.dy=-3;
+  if(keys['s']) player1.dy=3;
+  if(keys['a']) player1.dx=-3;
+  if(keys['d']) player1.dx=3;
 
-    // WALLS
-    function createWall(x,y,z,w,h,d){
-        let wall = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
-            new THREE.MeshBasicMaterial({color:0x555555}));
-        wall.position.set(x,y,z); scene.add(wall);
+  // PLAYER 2 CONTROLS (Arrow Keys)
+  player2.dy = player2.dx = 0;
+  if(keys['arrowup']) player2.dy=-3;
+  if(keys['arrowdown']) player2.dy=3;
+  if(keys['arrowleft']) player2.dx=-3;
+  if(keys['arrowright']) player2.dx=3;
+
+  // MOVE PLAYERS
+  player1.x += player1.dx; player1.y += player1.dy;
+  player2.x += player2.dx; player2.y += player2.dy;
+
+  // BOUNDARIES
+  [player1,player2].forEach(p=>{
+    if(p.x<p.radius) p.x=p.radius;
+    if(p.x>canvas.width-p.radius) p.x=canvas.width-p.radius;
+    if(p.y<p.radius) p.y=p.radius;
+    if(p.y>canvas.height-p.radius) p.y=canvas.height-p.radius;
+  });
+
+  // BALL MOVEMENT
+  ball.x += ball.dx; ball.y += ball.dy;
+  ball.dx *= 0.98; ball.dy *= 0.98; // friction
+
+  // BALL COLLISION WITH PLAYERS
+  [player1,player2].forEach(p=>{
+    const dist = Math.hypot(ball.x-p.x, ball.y-p.y);
+    if(dist < ball.radius+p.radius){
+      const angle = Math.atan2(ball.y-p.y, ball.x-p.x);
+      const speed = 5;
+      ball.dx = Math.cos(angle)*speed;
+      ball.dy = Math.sin(angle)*speed;
     }
-    createWall(0,2.5,-17,50,5,1);
-    createWall(0,2.5,17,50,5,1);
-    createWall(-30,2.5,0,1,5,35);
-    createWall(30,2.5,0,1,5,35);
+  });
 
-    // BALL
-    ball = new THREE.Mesh(new THREE.SphereGeometry(0.5,32,32),
-        new THREE.MeshBasicMaterial({color:0xffffff}));
-    ball.position.set(0,0.5,0); scene.add(ball);
+  // BALL COLLISION WITH WALLS
+  if(ball.x<ball.radius){ ball.x=ball.radius; ball.dx*=-1; }
+  if(ball.x>canvas.width-ball.radius){ ball.x=canvas.width-ball.radius; ball.dx*=-1; }
+  if(ball.y<ball.radius){ ball.y=ball.radius; ball.dy*=-1; }
+  if(ball.y>canvas.height-ball.radius){ ball.y=canvas.height-ball.radius; ball.dy*=-1; }
 
-    // CARS
-    car1 = createCar(0x0000ff,-10,0);
-    car2 = createCar(0xff0000,10,0);
+  // GOAL CHECK
+  if(ball.x<0 && ball.y>canvas.height/2-50 && ball.y<canvas.height/2+50){
+    score2++; resetBall();
+  }
+  if(ball.x>canvas.width && ball.y>canvas.height/2-50 && ball.y<canvas.height/2+50){
+    score1++; resetBall();
+  }
 
-    // BOOST PADS
-    createBoost(-15,0); createBoost(15,0); createBoost(0,10); createBoost(0,-10);
-
-    // INPUT
-    window.addEventListener('keydown', e=>keys[e.key.toLowerCase()]=true);
-    window.addEventListener('keyup', e=>keys[e.key.toLowerCase()]=false);
-
-    animate();
+  document.getElementById("score").innerText = score1 + " : " + score2;
 }
 
-// --- CAR & BOOST FUNCTIONS ---
-function createCar(color,x,z){
-    let c = new THREE.Mesh(new THREE.BoxGeometry(1,1,2),
-        new THREE.MeshBasicMaterial({color:color}));
-    c.position.set(x,0.5,z); scene.add(c); return c;
-}
-let boosts=[];
-function createBoost(x,z){
-    let b = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,0.2,32),
-        new THREE.MeshBasicMaterial({color:0xffff00}));
-    b.position.set(x,0.1,z); scene.add(b);
-    boosts.push({mesh:b, active:true});
-}
+// --- DRAW ---
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-// --- GAME LOOP & PHYSICS ---
-function updatePhysics(){
-    const speed=0.25, jump=0.2;
+  // FIELD LINE
+  ctx.strokeStyle="white";
+  ctx.lineWidth=4;
+  ctx.strokeRect(0,0,canvas.width,canvas.height);
 
-    // CAR1 (WASD + Space jump + Shift boost)
-    if(keys['w']) car1.position.z-=speed;
-    if(keys['s']) car1.position.z+=speed;
-    if(keys['a']) car1.position.x-=speed;
-    if(keys['d']) car1.position.x+=speed;
-    if(keys[' ']) car1.position.y+=jump;
-    if(keys['shift']) car1.position.z-=speed*2;
+  // GOALS
+  ctx.fillStyle="white";
+  ctx.fillRect(0,canvas.height/2-50,10,100);
+  ctx.fillRect(canvas.width-10,canvas.height/2-50,10,100);
 
-    // CAR2 (Arrow keys + Enter jump + Right boost)
-    if(keys['arrowup']) car2.position.z-=speed;
-    if(keys['arrowdown']) car2.position.z+=speed;
-    if(keys['arrowleft']) car2.position.x-=speed;
-    if(keys['arrowright']) car2.position.x+=speed;
-    if(keys['enter']) car2.position.y+=jump;
+  // PLAYERS
+  [player1,player2].forEach(p=>{
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);
+    ctx.fill();
+  });
 
-    // CAR-BALL COLLISIONS
-    [car1,car2].forEach(car=>{
-        let dist = car.position.distanceTo(ball.position);
-        if(dist<1.5){
-            let dir = new THREE.Vector3().subVectors(ball.position,car.position).normalize();
-            ballVelocity.add(dir.multiplyScalar(0.35));
-        }
-    });
-
-    // BALL PHYSICS
-    ball.position.add(ballVelocity);
-    ballVelocity.multiplyScalar(0.95);
-    if(ball.position.y>0.5) ballVelocity.y-=0.01;
-    if(ball.position.y<0.5) ball.position.y=0.5;
-
-    // WALL COLLISIONS
-    if(ball.position.x>29 || ball.position.x<-29) ballVelocity.x*=-1;
-    if(ball.position.z>16 || ball.position.z<-16) ballVelocity.z*=-1;
-
-    // BOOST PAD COLLISIONS
-    boosts.forEach(b=>{
-        if(b.active && car1.position.distanceTo(b.mesh.position)<2){ car1Velocity.z-=0.5; b.active=false; }
-        if(b.active && car2.position.distanceTo(b.mesh.position)<2){ car2Velocity.z+=0.5; b.active=false; }
-    });
-
-    // GOALS
-    if(ball.position.z>16 && Math.abs(ball.position.x)<5){ score1++; resetBall(); }
-    if(ball.position.z<-16 && Math.abs(ball.position.x)<5){ score2++; resetBall(); }
-    document.getElementById('score').innerText = score1 + " : " + score2;
+  // BALL
+  ctx.fillStyle="white";
+  ctx.beginPath();
+  ctx.arc(ball.x,ball.y,ball.radius,0,Math.PI*2);
+  ctx.fill();
 }
 
-function resetBall(){ ball.position.set(0,0.5,0); ballVelocity.set(0,0,0); }
-
-// --- CAMERA ---
-function updateCamera(){
-    camera.position.x = car1.position.x;
-    camera.position.z = car1.position.z + 15;
-    camera.position.y = car1.position.y + 10;
-    camera.lookAt(car1.position);
+// --- RESET BALL ---
+function resetBall(){
+  ball.x = canvas.width/2;
+  ball.y = canvas.height/2;
+  ball.dx = ball.dy = 0;
 }
 
-// --- ANIMATION LOOP ---
-function animate(){
-    requestAnimationFrame(animate);
-    updatePhysics(); updateCamera();
-    renderer.render(scene,camera);
+// --- MAIN LOOP ---
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
 }
+loop();
